@@ -4,6 +4,14 @@ from datetime import datetime
 import pytz
 from PIL import Image, ImageTk
 from io import BytesIO
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+SPOTIFY_ID = os.getenv("SPOTIFY_ID")
+SPOTIFY_SECRET = os.getenv("SPOTIFY_SECRET")
+TOKEN_URL = 'https://accounts.spotify.com/api/token'
 
 # Load the wmo_codes.json file
 with open('wmo_codes.json', 'r') as file:
@@ -30,6 +38,41 @@ def format_time(iso_time):
     local_time = utc_time.astimezone(tz)
     return local_time.strftime('%H:%M')
 
+def refresh_spotify_token():
+    creds = load_spotify_credentials()
+    refresh_token = creds['refresh_token']
+
+    # Request body for refreshing the token
+    payload = {
+        'grant_type': 'refresh_token',
+        'refresh_token': refresh_token,
+        'client_id': SPOTIFY_ID,
+        'client_secret': SPOTIFY_SECRET
+    }
+
+    # Make the request to refresh the token
+    response = requests.post(TOKEN_URL, data=payload)
+
+    if response.status_code == 200:
+        new_token_data = response.json()
+
+        # Update the credentials
+        creds['access_token'] = new_token_data['access_token']
+        creds['expires_in'] = new_token_data['expires_in']
+        
+        # If a new refresh token is returned, update it as well
+        if 'refresh_token' in new_token_data:
+            creds['refresh_token'] = new_token_data['refresh_token']
+
+        # Save the updated credentials back to the file
+        with open('spotify_token', 'w') as f:
+            json.dump(creds, f, indent=4)
+
+        print("Access token refreshed successfully!")
+    else:
+        print(f"Failed to refresh token. Status code: {response.status_code}, Response: {response.text}")
+
+
 def get_current_track_info(headers):
     """Poll the Spotify API to check if a song is playing and get the album art, song name, and artist."""
     try:
@@ -44,12 +87,33 @@ def get_current_track_info(headers):
                 return album_art_url, song_name, artist_name, True
             else:
                 return None, None, None, False
+        elif response.status_code == 401:
+            # Refresh the token
+            refresh_spotify_token()
+
+            # Load the new credentials and update the headers with the new access token
+            creds = load_spotify_credentials()
+            headers['Authorization'] = f"Bearer {creds['access_token']}"
+
+            # Retry the request with the updated headers
+            response = requests.get("https://api.spotify.com/v1/me/player", headers=headers)
+            if response.status_code == 200:
+                track_info = response.json()
+                if track_info['is_playing']:
+                    album_art_url = track_info['item']['album']['images'][0]['url']
+                    song_name = track_info['item']['name']
+                    artist_name = ", ".join(artist['name'] for artist in track_info['item']['artists'])
+                    return album_art_url, song_name, artist_name, True
+            else:
+                print(f"Failed to fetch playback information after token refresh: {response.status_code}")
+                return None, None, None, False
         else:
             print(f"Failed to fetch playback information: {response.status_code}")
             return None, None, None, False
     except Exception as e:
         print(f"Error fetching data: {e}")
         return None, None, None, False
+
 
 def show_album_art(album_label, img_data, player_width):
     """Display an image (album art or fallback) resized to fit the player_frame width."""

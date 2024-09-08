@@ -1,4 +1,3 @@
-import os
 import tkinter as tk
 from tkinter import Label, Frame, Button
 from utils import (
@@ -12,7 +11,6 @@ from utils import (
 )
 import requests
 from PIL import Image, ImageTk
-import json
 import io
 
 # Load the JSON from the token file
