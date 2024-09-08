@@ -1,5 +1,6 @@
+import os
 import tkinter as tk
-from tkinter import Label, Frame
+from tkinter import Label, Frame, Button
 from utils import (
     load_spotify_credentials,
     get_weather_info,
@@ -8,10 +9,10 @@ from utils import (
     skip_next,
     skip_previous,
     play_pause,
-    refresh_access_token
 )
 import requests
 from PIL import Image, ImageTk
+import json
 import io
 
 # Load the JSON from the token file
@@ -35,45 +36,6 @@ SPACING = 2  # Reduced padding between rows
 TIME_FONT_SIZE = 10  # Font size for the time label
 BOTTOM_PADDING = 10  # Padding to add at the bottom of the bottom_frame
 
-SPOTIFY_CURRENT_PLAYBACK_URL = "https://api.spotify.com/v1/me/player"
-SPOTIFY_NEXT_URL = "https://api.spotify.com/v1/me/player/next"
-SPOTIFY_PREVIOUS_URL = "https://api.spotify.com/v1/me/player/previous"
-SPOTIFY_PLAY_URL = "https://api.spotify.com/v1/me/player/play"
-SPOTIFY_PAUSE_URL = "https://api.spotify.com/v1/me/player/pause"
-
-def get_current_track_info():
-    """Poll the Spotify API to check if a song is playing and get the album art, song name, and artist."""
-    try:
-        response = requests.get(SPOTIFY_CURRENT_PLAYBACK_URL, headers=headers)
-        
-        if response.status_code == 401:  # Unauthorized, token might be expired
-            global ACCESS_TOKEN
-            new_token = refresh_access_token()
-            if new_token:
-                headers["Authorization"] = f"Bearer {ACCESS_TOKEN}"
-                response = requests.get(SPOTIFY_CURRENT_PLAYBACK_URL, headers=headers)
-            else:
-                print("Failed to refresh token")
-                return None, None, None, False
-        
-        if response.status_code == 200:
-            track_info = response.json()
-
-            # Check if the song is currently playing
-            if track_info['is_playing']:
-                album_art_url = track_info['item']['album']['images'][0]['url']
-                song_name = track_info['item']['name']
-                artist_name = ", ".join(artist['name'] for artist in track_info['item']['artists'])
-                return album_art_url, song_name, artist_name, True  # Return album art, song, artist, and playing status
-            else:
-                return None, None, None, False  # No song is playing
-        else:
-            print(f"Failed to fetch playback information: {response.status_code}")
-            return None, None, None, False
-    except Exception as e:
-        print(f"Error fetching data: {e}")
-        return None, None, None, False
-
 # Fetch weather data
 response = requests.get("https://api.open-meteo.com/v1/forecast?latitude=41.80968&longitude=-87.5968&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,daylight_duration,precipitation_hours&timezone=America%2FChicago&forecast_days=1")
 weather_data = response.json()
@@ -85,6 +47,7 @@ description, image_url = get_weather_info(current_weather['weather_code'], curre
 
 # Create the main window
 root = tk.Tk()
+root.attributes('-fullscreen',True)
 root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
 root.resizable(False, False)
 
@@ -180,15 +143,21 @@ song_label.pack()
 artist_label = Label(player_frame, text="", bg="black", fg="lightgrey", font=("Helvetica", 12))
 artist_label.pack()
 
+# Create skip previous button
+skip_previous_button = tk.Button(player_frame, text="Previous", command=lambda: skip_previous(headers), bg="grey", fg="white")
+skip_previous_button.pack(side='left')
+
 # Create play/pause button
 play_pause_button = tk.Button(player_frame, text="Play", command=lambda: play_pause(headers, play_pause_button), bg="grey", fg="white")
 play_pause_button.pack(side='left')
 
-# Create skip next and previous buttons
+# Create skip next button
 skip_next_button = tk.Button(player_frame, text="Next", command=lambda: skip_next(headers), bg="grey", fg="white")
 skip_next_button.pack(side='left')
-skip_previous_button = tk.Button(player_frame, text="Previous", command=lambda: skip_previous(headers), bg="grey", fg="white")
-skip_previous_button.pack(side='left')
+
+# Create close button
+close_button = Button(root, text="X", command=root.destroy, bg="red", fg="white", font=("Helvetica", 12, "bold"))
+close_button.place(x=WINDOW_WIDTH - 30, y=5, width=25, height=25)
 
 # Update album art and track info every 5 seconds
 def update():

@@ -4,7 +4,6 @@ from datetime import datetime
 import pytz
 from PIL import Image, ImageTk
 from io import BytesIO
-import base64
 
 # Load the wmo_codes.json file
 with open('wmo_codes.json', 'r') as file:
@@ -15,33 +14,6 @@ def load_spotify_credentials():
     with open('spotify_token', 'r') as file:
         credentials = json.load(file)
     return credentials
-
-def refresh_access_token():
-    """Use the refresh token to get a new access token."""
-    credentials = load_spotify_credentials()
-    REFRESH_TOKEN = credentials["refresh_token"]
-    SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
-    CLIENT_ID = credentials["client_id"]
-    CLIENT_SECRET = credentials["client_secret"]
-
-    headers = {
-        "Authorization": f"Basic {base64.b64encode(f'{CLIENT_ID}:{CLIENT_SECRET}'.encode()).decode()}"
-    }
-    data = {
-        "grant_type": "refresh_token",
-        "refresh_token": REFRESH_TOKEN
-    }
-    
-    response = requests.post(SPOTIFY_TOKEN_URL, headers=headers, data=data)
-    if response.status_code == 200:
-        new_credentials = response.json()
-        ACCESS_TOKEN = new_credentials["access_token"]
-        with open('spotify_token', 'w') as file:
-            json.dump({"access_token": ACCESS_TOKEN, "refresh_token": REFRESH_TOKEN, "client_id": CLIENT_ID, "client_secret": CLIENT_SECRET}, file)
-        return ACCESS_TOKEN
-    else:
-        print("Failed to refresh access token")
-        return None
 
 # Function to get weather description and image based on weather code
 def get_weather_info(weather_code, is_day):
