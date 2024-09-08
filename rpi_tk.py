@@ -81,8 +81,8 @@ description_label = Label(weather_frame, text=description, bg="black", fg="light
 description_label.grid(row=2, column=1, padx=SPACING, pady=SPACING)
 
 # Display max and min temperatures horizontally
-temp_max_label = Label(weather_frame, text=f"🔺 {daily_weather['temperature_2m_max'][0]} °C", bg="black", fg="lightgrey", font=("Helvetica", TEMP_FONT_SIZE))
-temp_min_label = Label(weather_frame, text=f"🔻 {daily_weather['temperature_2m_min'][0]} °C", bg="black", fg="lightgrey", font=("Helvetica", TEMP_FONT_SIZE))
+temp_max_label = Label(weather_frame, text=f"\U0001F53A {daily_weather['temperature_2m_max'][0]} °C", bg="black", fg="lightgrey", font=("Helvetica", TEMP_FONT_SIZE))
+temp_min_label = Label(weather_frame, text=f"\U0001F53B {daily_weather['temperature_2m_min'][0]} °C", bg="black", fg="lightgrey", font=("Helvetica", TEMP_FONT_SIZE))
 temp_max_label.grid(row=3, column=1, padx=SPACING, pady=SPACING, sticky='w')
 temp_min_label.grid(row=3, column=2, padx=SPACING, pady=SPACING, sticky='w')
 
